@@ -35,7 +35,6 @@
     .main-wrapper { padding: 12px; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .panel-container { background: var(--bg-card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
     
-    /* ขยายความกว้างเผื่อพื้นที่ให้ตัวอักษรเปอร์เซ็นต์ท้ายกราฟเล็กน้อย */
     .chart-container { max-width: 100%; height: 140px; position: relative; margin-bottom: 8px; padding-right: 15px; }
     
     .controls-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
@@ -90,7 +89,20 @@
     
     .card-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px; }
     .card-actions label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
-    .inline-select { padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; background: #fff; border: 1px solid var(--border); color: var(--text-main); max-width: 140px; }
+    
+    /* 🛠️ ปรับปรุงสไตล์ช่อง Select สลับสถานะบนการ์ด เพื่อไม่ให้เบี้ยวในระบบ iOS */
+    .inline-select { 
+      padding: 6px 10px; 
+      font-size: 0.85rem; 
+      border-radius: 8px; 
+      background: #fff; 
+      border: 1px solid var(--border); 
+      color: var(--text-main); 
+      max-width: 140px; 
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box !important;
+    }
     
     .fab-btn { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 14px rgba(46, 125, 50, 0.4); display: flex; align-items: center; justify-content: center; z-index: 999; transition: transform 0.2s; }
     .fab-btn:active { transform: scale(0.9); }
@@ -105,11 +117,33 @@
 
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-sub); }
-    input[type="text"], input[type="number"], input[type="date"], select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; outline: none; background: #fafdfa; color: var(--text-main); }
+    
+    /* 🛠️ แก้ไขปัญหาช่องวันที่ (Date) และอินพุตอื่นๆ บวมหล่นขอบจอบน iOS Safari */
+    input[type="text"], input[type="number"], input[type="date"], select { 
+      width: 100%; 
+      padding: 12px; 
+      border: 1px solid var(--border); 
+      border-radius: 10px; 
+      font-size: 0.95rem; 
+      outline: none; 
+      background: #fafdfa; 
+      color: var(--text-main); 
+      -webkit-appearance: none;       /* ล้างค่าดั้งเดิมของระบบ iOS */
+      appearance: none;
+      box-sizing: border-box !important;  /* บังคับให้คิดความกว้างรวม Padding เสมอ */
+      min-width: 0;                    /* ป้องกันบราวเซอร์แอบขยายขนาดกล่องอัตโนมัติ */
+    }
     input:focus, select:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
     input[readonly] { background-color: #e8f5e9; color: var(--text-sub); cursor: not-allowed; }
     input.new-item-input { background: #fff3cd !important; border-color: #ffeba2 !important; color: #856404 !important; }
     
+    /* 🛠️ ดึงฟอร์แมตช่องวันที่ของ iOS ให้มีความสูงที่พอดีเป๊ะ กดเลือกง่าย */
+    input[type="date"] {
+      display: flex;
+      align-items: center;
+      min-height: 45px;
+    }
+
     .qty-row { display: flex; gap: 10px; }
     .qty-container { display: flex; align-items: center; flex: 2; border: 1px solid var(--border); border-radius: 10px; background: #fafdfa; padding: 2px; }
     .qty-btn { background: #fff; border: 1px solid var(--border); color: var(--text-main); width: 38px; height: 38px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -438,37 +472,29 @@
     }).then(() => { showAlert("✅ บันทึกสำเร็จ!"); });
   }
 
-  // 📊 🛠️ เริ่มต้นสร้างกราฟแท่ง แนวนอนแบบกำหนดเอง (ลบตัวเลขแกนออก ย้ายเปอร์เซ็นต์ไปไว้ปลายแท่ง)
   function initChart() {
     const ctx = document.getElementById('statusChart').getContext('2d');
     
-    // 💡 สร้างสคริปต์สําหรับคำนวณและวาดเปอร์เซ็นต์/จำนวน ยื่นออกมาที่ท้ายแท่งกราฟโดยเฉพาะ
     const customDataLabelsPlugin = {
       id: 'customDataLabels',
       afterDatasetsDraw(chart) {
         const { ctx, data } = chart;
-        
-        // คำนวณหาจำนวนรวมเคสทั้งหมด ณ ปัจจุบันก่อน
         const dataset = data.datasets[0];
         const total = dataset.data.reduce((a, b) => a + b, 0);
 
         chart.getDatasetMeta(0).data.forEach((bar, index) => {
           const value = dataset.data[index];
-          // หากไม่มีข้อมูลในประเภทนั้นๆ ไม่ต้องวาดตัวอักษรลงไป
           if (value === 0) return; 
 
-          // คำนวณเปอร์เซ็นต์สัดส่วน
           const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-          const textToShow = ` ${value} (${percentage}%)`;
+          const textToShow = ` ${value} ( ${percentage}% )`;
 
-          // ตั้งค่าฟอนต์ให้อ่านง่ายและคุมโทนธรรมชาติ
           ctx.save();
           ctx.font = 'bold 12px Sarabun';
           ctx.fillStyle = '#1b5e20'; 
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
           
-          // ระบุพิกัดปลายแท่งกราฟ แล้วดันข้อความให้ยื่นออกไปทางขวา 8 พิกเซล
           const xPos = bar.x + 8;
           const yPos = bar.y;
           
@@ -495,12 +521,12 @@
         maintainAspectRatio: false,
         layout: {
           padding: {
-            right: 80 // ⚡ ล็อกขอบขวาของพื้นที่กราฟ เพื่อป้องกันไม่ให้ตัวหนังสือเปอร์เซ็นต์ล้นหลุดขอบจอ
+            right: 80 
           }
         },
         scales: {
           x: { 
-            display: false, // ⚡ ลบตัวเลขตารางและเส้นแกน X ด้านล่างออกทั้งหมด
+            display: false, 
             beginAtZero: true
           },
           y: { 
@@ -510,10 +536,10 @@
         },
         plugins: {
           legend: { display: false },
-          tooltip: { enabled: false } // ปิด Tooltip ป็อปอัพสีดำออก เพราะมีตัวเลขสถิติบอกชัดเจนที่ปลายแท่งแล้วบนมือถือ
+          tooltip: { enabled: false } 
         }
       },
-      plugins: [customDataLabelsPlugin] // ⚡ เรียกเปิดใช้งานฟังก์ชันวาดข้อความปลายแท่งที่เราสร้างไว้ด้านบน
+      plugins: [customDataLabelsPlugin] 
     });
   }
 
