@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fresh Food Defect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    :root {
+      --primary: #2e7d32;   
+      --success: #43a047;   
+      --warning: #f9a825;   
+      --danger: #e65100;    
+      --bg-body: #f4f7f4;   
+      --bg-card: #ffffff;   
+      --text-main: #1b5e20;  
+      --text-sub: #558b2f;   
+      --border: #c8e6c9;    
+    }
+    
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-body); color: var(--text-main); padding: 0; min-height: 100vh; padding-bottom: 90px; }
+    
+    .alert { position: fixed; top: 0; left: 0; width: 100%; padding: 14px; background: #e8f5e9; color: #1b5e20; border-bottom: 2px solid #a5d6a7; box-shadow: 0 4px 10px rgba(0,0,0,0.05); z-index: 2000; display: none; font-weight: 600; text-align: center; font-size: 0.9rem; animation: slideDown 0.2s ease-out; }
+    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+    .app-header { position: sticky; top: 0; background: var(--bg-card); z-index: 100; padding: 16px; border-bottom: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+    .app-header h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); }
+
+    .main-wrapper { padding: 12px; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .panel-container { background: var(--bg-card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
+    
+    /* ขยายความกว้างเผื่อพื้นที่ให้ตัวอักษรเปอร์เซ็นต์ท้ายกราฟเล็กน้อย */
+    .chart-container { max-width: 100%; height: 140px; position: relative; margin-bottom: 8px; padding-right: 15px; }
+    
+    .controls-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+    
+    .search-box { 
+      position: relative; 
+      width: 100%;
+    }
+    .search-box i { 
+      position: absolute; 
+      left: 14px; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      color: var(--text-sub); 
+      pointer-events: none;
+      z-index: 2;
+    }
+    .search-box input { 
+      width: 100%; 
+      padding: 12px 12px 12px 42px !important; 
+      border: 1px solid var(--border); 
+      border-radius: 10px; 
+      font-size: 0.95rem; 
+      outline: none; 
+      background: #fafdfa; 
+      color: var(--text-main);
+      position: relative;
+      z-index: 1;
+    }
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+    }
+    
+    .filter-group { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .filter-group::-webkit-scrollbar { display: none; } 
+    .filter-btn { padding: 8px 16px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff; border-radius: 20px; cursor: pointer; font-weight: 600; color: var(--text-sub); white-space: nowrap; transition: 0.15s; box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+    .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    
+    .item-list { display: flex; flex-direction: column; gap: 10px; }
+    .card { background: #fff; border-left: 5px solid #cbd5e1; padding: 14px; border-radius: 14px; border: 1px solid var(--border); border-left-width: 5px; transition: transform 0.15s; contain: content; position: relative; }
+    
+    .card.status-load { border-left-color: var(--warning); background-color: #fffbeb; }
+    .card.status-delay { border-left-color: var(--danger); background-color: #fffaf5; }
+    .card.status-punched { border-left-color: var(--success); background-color: #f7fbf7; }
+    
+    .card-header-row { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 4px; }
+    .card-title { font-weight: 600; font-size: 0.95rem; color: var(--text-main); line-height: 1.4; flex: 1; }
+    
+    .card-detail { font-size: 0.85rem; color: #33691e; line-height: 1.5; margin-bottom: 8px; }
+    .time-stamp { font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    
+    .card-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px; }
+    .card-actions label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
+    .inline-select { padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; background: #fff; border: 1px solid var(--border); color: var(--text-main); max-width: 140px; }
+    
+    .fab-btn { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; background: var(--primary); color: white; border: none; border-radius: 50%; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 14px rgba(46, 125, 50, 0.4); display: flex; align-items: center; justify-content: center; z-index: 999; transition: transform 0.2s; }
+    .fab-btn:active { transform: scale(0.9); }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(27, 94, 32, 0.3); backdrop-filter: blur(2px); display: flex; align-items: flex-end; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+    .modal-content { background: #fff; width: 100%; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.05); padding: 20px; position: relative; max-height: 85vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.1, 0.76, 0.55, 0.94); border: 1px solid var(--border); border-bottom: none; }
+    .modal-overlay.open .modal-content { transform: translateY(0); }
+    
+    .close-modal-btn { position: absolute; top: 16px; right: 16px; background: #e8f5e9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-sub); }
+    input[type="text"], input[type="number"], input[type="date"], select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; outline: none; background: #fafdfa; color: var(--text-main); }
+    input:focus, select:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
+    input[readonly] { background-color: #e8f5e9; color: var(--text-sub); cursor: not-allowed; }
+    input.new-item-input { background: #fff3cd !important; border-color: #ffeba2 !important; color: #856404 !important; }
+    
+    .qty-row { display: flex; gap: 10px; }
+    .qty-container { display: flex; align-items: center; flex: 2; border: 1px solid var(--border); border-radius: 10px; background: #fafdfa; padding: 2px; }
+    .qty-btn { background: #fff; border: 1px solid var(--border); color: var(--text-main); width: 38px; height: 38px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    input[type="number"] { border: none; background: transparent; text-align: center; font-weight: 600; padding: 0; }
+    .unit-container { flex: 1; }
+    
+    .btn-submit { width: 100%; padding: 14px; background: var(--success); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(67, 160, 71, 0.2); }
+    .btn-submit:disabled { background: #cbd5e1; box-shadow: none; }
+    .loading-text { font-size: 0.8rem; color: var(--primary); display: none; margin-top: 4px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div id="alertBox" class="alert"></div>
+
+<div class="app-header">
+  <div style="max-width:600px; margin:0 auto; width:100%;">
+    <h2><i class="fa-solid fa-seedling" style="color: var(--primary);"></i> ข้อมูลสินค้าอาหารสดที่มีความผิดปกติ</h2>
+  </div>
+</div>
+
+<button class="fab-btn" onclick="openModal()"><i class="fa-solid fa-plus"></i></button>
+
+<div id="formModal" class="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal-content">
+    <button class="close-modal-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    <h3 style="margin-bottom: 16px; font-size: 1.1rem;"><i class="fa-solid fa-apple-whole" style="color: var(--danger);"></i> บันทึกสินค้าผิดปกติ</h3>
+    
+    <form id="defectForm" onsubmit="handleFormSubmit(event)">
+      <div class="form-group">
+        <label for="item">รหัสสินค้า (Item)</label>
+        <input type="text" id="item" name="item" placeholder="กรอกรหัสสินค้า..." required oninput="fetchDescription()">
+        <div id="loadingDesc" class="loading-text"><i class="fas fa-spinner fa-spin"></i> กำลังค้นหาชื่อสินค้า...</div>
+      </div>
+      <div class="form-group">
+        <label for="description">ชื่อสินค้า (Description)</label>
+        <input type="text" id="description" name="description" placeholder="แสดงอัตโนมัติ หรือพิมพ์เพิ่มเองหากไม่พบ" required>
+      </div>
+      <div class="form-group">
+        <label>จำนวนและหน่วยนับ</label>
+        <div class="qty-row">
+          <div class="qty-container">
+            <button type="button" class="qty-btn" onclick="adjustQty(-1)">-</button>
+            <input type="number" id="quantity" name="quantity" value="1" min="0.01" step="any" required>
+            <button type="button" class="qty-btn" onclick="adjustQty(1)">+</button>
+          </div>
+          <div class="unit-container">
+            <select id="unit" name="unit" onchange="handleUnitChange()">
+              <option value="ชิ้น">ชิ้น</option>
+              <option value="กก.">กก.</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="receiveDate">วันที่รับสินค้า</label>
+        <input type="date" id="receiveDate" name="receiveDate" required>
+      </div>
+      <div class="form-group">
+        <label for="warehouse">คลังสินค้า (Warehouse)</label>
+        <select id="warehouse" name="warehouse" required>
+          <option value="" disabled selected>เลือกคลังสินค้า</option>
+          <option value="901">คลัง 901</option>
+          <option value="920">คลัง 920</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="status">สถานะสินค้า (Status)</label>
+        <select id="status" name="status" required>
+          <option value="รอ Load">⏳ รอ Load</option>
+          <option value="สินค้าตกค้าง">⚠️ สินค้าตกค้าง</option>
+          <option value="Punched">✅ Punched</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-submit" id="submitBtn"><i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล</button>
+    </form>
+  </div>
+</div>
+
+<div class="main-wrapper">
+  <div class="panel-container">
+    <div class="chart-container">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="searchBar" placeholder="ค้นหาด้วย รหัส หรือ ชื่อสินค้า..." oninput="filterData()">
+    </div>
+    <div class="filter-group">
+      <button class="filter-btn active" onclick="changeFilter('ทั้งหมด', this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="changeFilter('รอ Load', this)">⏳ รอ Load</button>
+      <button class="filter-btn" onclick="changeFilter('สินค้าตกค้าง', this)">⚠️ ตกค้าง</button>
+      <button class="filter-btn" onclick="changeFilter('Punched', this)">✅ Punched</button>
+    </div>
+  </div>
+
+  <div id="loadingList" style="display:none; text-align:center; padding:20px; color: var(--text-sub);">
+    <i class="fas fa-spinner fa-spin fa-lg"></i> <span style="margin-left:8px; font-size:0.9rem;">กำลังโหลดข้อมูล...</span>
+  </div>
+  
+  <div id="itemList" class="item-list"></div>
+</div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgqzVsA8CF0z2cQ2KBHiOmfnrATaX3ThDYvpVeuo-jfd8m-VF__2xmaxlFKTJrshhC/exec";
+  let allLogsData = []; 
+  let currentFilterStatus = "ทั้งหมด";
+  let statusChartInstance = null;
+
+  document.getElementById('description').readOnly = true;
+  document.getElementById('receiveDate').value = new Date().toISOString().substring(0, 10);
+  
+  window.addEventListener('DOMContentLoaded', () => {
+    initChart();
+    loadData();
+  });
+
+  function openModal() {
+    document.getElementById('formModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    document.getElementById('formModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function closeModalOutside(event) {
+    if(event.target.id === 'formModal') closeModal();
+  }
+
+  function handleUnitChange() {
+    const unit = document.getElementById('unit').value;
+    const qtyInput = document.getElementById('quantity');
+    qtyInput.step = "any";
+    if (unit === "ชิ้น") { qtyInput.value = Math.round(parseFloat(qtyInput.value)) || 1; }
+  }
+
+  function adjustQty(amount) {
+    const qtyInput = document.getElementById('quantity');
+    const unit = document.getElementById('unit').value;
+    const currentVal = parseFloat(qtyInput.value) || 0;
+    const newVal = currentVal + amount;
+    if(newVal >= 0.01) qtyInput.value = (unit === "ชิ้น") ? Math.round(newVal) : newVal.toFixed(2);
+  }
+
+  let typingTimer;
+  function fetchDescription() {
+    clearTimeout(typingTimer);
+    const itemCode = document.getElementById('item').value.trim();
+    const descInput = document.getElementById('description');
+    const loadingText = document.getElementById('loadingDesc');
+    if (!itemCode) { resetDescriptionField(); return; }
+    
+    loadingText.style.display = "block";
+    typingTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${WEB_APP_URL}?action=getDescription&item=${encodeURIComponent(itemCode)}`);
+        const data = await res.json();
+        if(data.description) { 
+          descInput.value = data.description; descInput.readOnly = true;
+          descInput.classList.remove('new-item-input'); descInput.placeholder = "แสดงอัตโนมัติ";
+        } else { 
+          descInput.value = ""; descInput.readOnly = false;
+          descInput.classList.add('new-item-input');
+          descInput.placeholder = "โปรดพิมพ์ชื่อสินค้าใหม่ที่นี่...";
+          showAlert("⚠️ ไม่พบรหัสสินค้า สามารถพิมพ์ชื่อเพิ่มใหม่ได้เลย");
+        }
+      } catch {
+        descInput.value = ""; descInput.placeholder = "❌ เกิดข้อผิดพลาดในการเชื่อมต่อ";
+      } finally { loadingText.style.display = "none"; }
+    }, 450); 
+  }
+
+  function resetDescriptionField() {
+    const descInput = document.getElementById('description');
+    descInput.value = ""; descInput.readOnly = true;
+    descInput.classList.remove('new-item-input');
+    descInput.placeholder = "แสดงอัตโนมัติ หรือพิมพ์เพิ่มเองหากไม่พบ";
+  }
+
+  async function handleFormSubmit(event) {
+    event.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
+    const description = document.getElementById('description').value.trim();
+    if(!description || description.includes("เกิดข้อผิดพลาด")) { alert("กรุณากรอกชื่อสินค้าให้ถูกต้องก่อนบันทึก"); return; }
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...`;
+    
+    const newItem = {
+      item: document.getElementById('item').value.trim(),
+      description: description,
+      quantity: document.getElementById('quantity').value + " " + document.getElementById('unit').value,
+      receiveDate: document.getElementById('receiveDate').value,
+      warehouse: document.getElementById('warehouse').value,
+      status: document.getElementById('status').value
+    };
+
+    try {
+      allLogsData.unshift({ ...newItem, row: 'temp', updatedAt: new Date().toISOString() });
+      filterData();
+      closeModal();
+      showAlert("🎉 บันทึกข้อมูลเรียบร้อยแล้ว!");
+      
+      document.getElementById('defectForm').reset();
+      resetDescriptionField();
+      document.getElementById('receiveDate').value = new Date().toISOString().substring(0, 10);
+
+      await fetch(WEB_APP_URL, { 
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "saveLog", ...newItem }) 
+      });
+      loadData(); 
+    } catch (err) { console.error(err); } 
+    finally { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล`; }
+  }
+
+  async function loadData() {
+    const listContainer = document.getElementById('itemList');
+    const loader = document.getElementById('loadingList');
+    if(allLogsData.length === 0) { listContainer.innerHTML = ""; loader.style.display = "block"; }
+
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getLogs`);
+      allLogsData = await res.json();
+      filterData();
+    } catch {
+      if(allLogsData.length === 0) listContainer.innerHTML = "<p style='text-align:center;color:var(--danger);font-size:0.9rem;'>เกิดข้อผิดพลาดในการดึงข้อมูล</p>";
+    } finally { loader.style.display = "none"; }
+  }
+
+  function changeFilter(status, btnElement) {
+    currentFilterStatus = status;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+    
+    btnElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    filterData();
+  }
+
+  function filterData() {
+    const searchQuery = document.getElementById('searchBar').value.toLowerCase();
+    const filtered = allLogsData.filter(log => {
+      const matchSearch = String(log.item).toLowerCase().includes(searchQuery) || String(log.description).toLowerCase().includes(searchQuery);
+      const matchStatus = currentFilterStatus === "ทั้งหมด" || String(log.status) === currentFilterStatus;
+      return matchSearch && matchStatus;
+    });
+    renderCards(filtered);
+    updateChartData(); 
+  }
+
+  function renderCards(data) {
+    const listContainer = document.getElementById('itemList');
+    listContainer.innerHTML = "";
+    if(data.length === 0) { 
+      listContainer.innerHTML = "<p style='text-align:center;color:var(--text-sub);padding:30px;font-size:0.9rem;'>ไม่มีรายการบันทึกที่ตรงเงื่อนไข</p>"; return; 
+    }
+
+    let htmlContent = '';
+    data.forEach(log => {
+      let statusClass = log.status === "สินค้าตกค้าง" ? "status-delay" : (log.status === "Punched" ? "status-punched" : "status-load");
+      
+      let formattedDate = '-';
+      if (log.receiveDate) {
+        formattedDate = String(log.receiveDate).substring(0, 10);
+      }
+      
+      let formattedTime = '-';
+      if (log.updatedAt) {
+        const d = new Date(log.updatedAt);
+        if(!isNaN(d.getTime())) {
+          formattedTime = d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + 
+                          d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+        } else { formattedTime = log.updatedAt; }
+      }
+
+      htmlContent += `
+        <div class="card ${statusClass}">
+          <div class="card-header-row">
+            <div class="card-title">[${log.item}] ${log.description}</div>
+          </div>
+          <div class="card-detail">
+            <strong>จำนวน:</strong> ${log.quantity} &nbsp;|&nbsp; <strong>คลัง:</strong> ${log.warehouse}<br>
+            <strong>วันที่รับ:</strong> ${formattedDate}
+            <div class="time-stamp"><i class="fa-regular fa-clock"></i> ล่าสุด: ${formattedTime}</div>
+          </div>
+          <div class="card-actions">
+            <label>เปลี่ยนสถานะ:</label>
+            <select class="inline-select" onchange="updateStatus('${log.row}', this.value, this)">
+              <option value="รอ Load" ${log.status === 'รอ Load' ? 'selected' : ''}>⏳ รอ Load</option>
+              <option value="สินค้าตกค้าง" ${log.status === 'สินค้าตกค้าง' ? 'selected' : ''}>⚠️ ตกค้าง</option>
+              <option value="Punched" ${log.status === 'Punched' ? 'selected' : ''}>✅ Punched</option>
+            </select>
+          </div>
+        </div>`;
+    });
+    listContainer.innerHTML = htmlContent;
+  }
+
+  function updateStatus(rowId, newStatus, selectElem) {
+    if(rowId === 'temp') return; 
+
+    const card = selectElem.closest('.card');
+    card.className = `card ${newStatus === "สินค้าตกค้าง" ? "status-delay" : (newStatus === "Punched" ? "status-punched" : "status-load")}`;
+    
+    const now = new Date();
+    const timeString = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + 
+                       now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+    const timeStampElem = card.querySelector('.time-stamp');
+    if(timeStampElem) timeStampElem.innerHTML = `<i class="fa-regular fa-clock"></i> ล่าสุด: ${timeString}`;
+
+    const index = allLogsData.findIndex(item => String(item.row) === String(rowId));
+    if(index !== -1) {
+      allLogsData[index].status = newStatus;
+      allLogsData[index].updatedAt = now.toISOString();
+    }
+
+    filterData();
+    showAlert("✏️ กำลังบันทึกสถานะใหม่...");
+    
+    fetch(WEB_APP_URL, { 
+      method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "updateStatus", row: rowId, status: newStatus }) 
+    }).then(() => { showAlert("✅ บันทึกสำเร็จ!"); });
+  }
+
+  // 📊 🛠️ เริ่มต้นสร้างกราฟแท่ง แนวนอนแบบกำหนดเอง (ลบตัวเลขแกนออก ย้ายเปอร์เซ็นต์ไปไว้ปลายแท่ง)
+  function initChart() {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    
+    // 💡 สร้างสคริปต์สําหรับคำนวณและวาดเปอร์เซ็นต์/จำนวน ยื่นออกมาที่ท้ายแท่งกราฟโดยเฉพาะ
+    const customDataLabelsPlugin = {
+      id: 'customDataLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        
+        // คำนวณหาจำนวนรวมเคสทั้งหมด ณ ปัจจุบันก่อน
+        const dataset = data.datasets[0];
+        const total = dataset.data.reduce((a, b) => a + b, 0);
+
+        chart.getDatasetMeta(0).data.forEach((bar, index) => {
+          const value = dataset.data[index];
+          // หากไม่มีข้อมูลในประเภทนั้นๆ ไม่ต้องวาดตัวอักษรลงไป
+          if (value === 0) return; 
+
+          // คำนวณเปอร์เซ็นต์สัดส่วน
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+          const textToShow = ` ${value} (${percentage}%)`;
+
+          // ตั้งค่าฟอนต์ให้อ่านง่ายและคุมโทนธรรมชาติ
+          ctx.save();
+          ctx.font = 'bold 12px Sarabun';
+          ctx.fillStyle = '#1b5e20'; 
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          
+          // ระบุพิกัดปลายแท่งกราฟ แล้วดันข้อความให้ยื่นออกไปทางขวา 8 พิกเซล
+          const xPos = bar.x + 8;
+          const yPos = bar.y;
+          
+          ctx.fillText(textToShow, xPos, yPos);
+          ctx.restore();
+        });
+      }
+    };
+
+    statusChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['รอ Load ⏳', 'ตกค้าง ⚠️', 'Punched ✅'],
+        datasets: [{
+          data: [0, 0, 0],
+          backgroundColor: ['#f9a825', '#e65100', '#43a047'],
+          borderRadius: 6,
+          barThickness: 16 
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            right: 80 // ⚡ ล็อกขอบขวาของพื้นที่กราฟ เพื่อป้องกันไม่ให้ตัวหนังสือเปอร์เซ็นต์ล้นหลุดขอบจอ
+          }
+        },
+        scales: {
+          x: { 
+            display: false, // ⚡ ลบตัวเลขตารางและเส้นแกน X ด้านล่างออกทั้งหมด
+            beginAtZero: true
+          },
+          y: { 
+            ticks: { font: { family: 'Sarabun', weight: 'bold', size: 12 }, color: '#1b5e20' }, 
+            grid: { display: false } 
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false } // ปิด Tooltip ป็อปอัพสีดำออก เพราะมีตัวเลขสถิติบอกชัดเจนที่ปลายแท่งแล้วบนมือถือ
+        }
+      },
+      plugins: [customDataLabelsPlugin] // ⚡ เรียกเปิดใช้งานฟังก์ชันวาดข้อความปลายแท่งที่เราสร้างไว้ด้านบน
+    });
+  }
+
+  function updateChartData() {
+    if (!statusChartInstance) return;
+    let countLoad = 0, countDelay = 0, countPunched = 0;
+    const searchQuery = document.getElementById('searchBar').value.toLowerCase();
+    
+    allLogsData.forEach(log => {
+      const matchSearch = String(log.item).toLowerCase().includes(searchQuery) || String(log.description).toLowerCase().includes(searchQuery);
+      if(matchSearch) {
+        if (log.status === 'รอ Load') countLoad++;
+        else if (log.status === 'สินค้าตกค้าง') countDelay++;
+        else if (log.status === 'Punched') countPunched++;
+      }
+    });
+    statusChartInstance.data.datasets[0].data = [countLoad, countDelay, countPunched];
+    statusChartInstance.update();
+  }
+
+  function showAlert(msg) {
+    const alertBox = document.getElementById('alertBox');
+    alertBox.innerText = msg; alertBox.style.display = "block";
+    if(window.alertTimeout) clearTimeout(window.alertTimeout);
+    window.alertTimeout = setTimeout(() => alertBox.style.display = "none", 2500);
+  }
+</script>
+</body>
+</html>
