@@ -39,7 +39,8 @@
     .main-wrapper { padding: 12px; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .panel-container { background: var(--bg-card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
     
-    .chart-container { max-width: 100%; height: 140px; position: relative; margin-bottom: 8px; padding-right: 15px; }
+    /* 🛠️ ปรับความสูงของกล่องกราฟครึ่งวงกลมให้พอดี (กระชับและไม่เหลือขอบล่างเยอะเกินไป) */
+    .chart-container { max-width: 100%; height: 160px; position: relative; margin-bottom: 0px; padding: 0; }
     
     .controls-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
     
@@ -566,85 +567,82 @@
     }).then(() => { showAlert("✅ บันทึกสำเร็จ!"); });
   }
 
-  // ฟังก์ชันตั้งค่ากราฟ: แก้ไขปัญหาเบียดจอด้านซ้ายบน iOS Safari 100%
+  // ✨ ฟังก์ชันตั้งค่ากราฟใหม่: เปลี่ยนประเภทเป็น Doughnut Chart และปรับมุมให้แสดงผลเป็น "ครึ่งวงกลมด้านบน"
   function initChart() {
     const ctx = document.getElementById('statusChart').getContext('2d');
     
-    const customDataLabelsPlugin = {
-      id: 'customDataLabels',
-      afterDatasetsDraw(chart) {
-        const { ctx, data } = chart;
-        const dataset = data.datasets[0];
-        const total = dataset.data.reduce((a, b) => a + b, 0);
-
-        chart.getDatasetMeta(0).data.forEach((bar, index) => {
-          const value = dataset.data[index];
-          if (value === 0) return; 
-
-          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-          const textToShow = ` ${value} (${percentage}%)`;
-
-          ctx.save();
-          ctx.font = 'bold 11px Sarabun'; 
-          
-          // เช็คความกว้างของแท่งกราฟ ถ้ายาวพอให้ซ่อนตัวเลขเข้าด้านใน (สีขาว) ถ้ายาวไม่พอให้อยู่ข้างนอก (สีเขียว)
-          if (bar.width > 70) {
-            ctx.fillStyle = '#ffffff'; 
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(textToShow, bar.x - 8, bar.y);
-          } else {
-            ctx.fillStyle = '#1b5e20'; 
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(textToShow, bar.x + 8, bar.y);
-          }
-          
-          ctx.restore();
-        });
-      }
-    };
-
     statusChartInstance = new Chart(ctx, {
-      type: 'bar',
+      type: 'doughnut', // เปลี่ยนประเภทกราฟ
       data: {
-        labels: ['รอ Load ⏳', 'ตกค้าง ⚠️', 'Punched ✅'],
+        labels: ['รอ Load', 'ตกค้าง', 'Punched'],
         datasets: [{
           data: [0, 0, 0],
           backgroundColor: ['#f9a825', '#e65100', '#43a047'],
-          borderRadius: 6,
-          barThickness: 18 
+          borderWidth: 2,
+          borderColor: '#ffffff'
         }]
       },
       options: {
-        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
+        rotation: -90,      // หมุนเริ่มต้นจากฝั่งซ้าย (-90 องศา)
+        circumference: 180, // วาดมุมแค่ 180 องศาเพื่อให้เป็นรูปครึ่งวงกลมพอดี
+        cutout: '60%',      // กำหนดความหนาของวงแหวนครึ่งวงกลม
         layout: {
           padding: {
-            left: 95,  // ขยายพื้นที่ช่องว่างให้แกน Y ฝั่งซ้ายเต็มที่ ไม่ให้ตัวอักษร "รอ Load ⏳" โดนบีบหาย
-            right: 65, 
-            top: 5,
-            bottom: 5
-          }
-        },
-        scales: {
-          x: { display: false, beginAtZero: true },
-          y: { 
-            ticks: { 
-              font: { family: 'Sarabun', weight: 'bold', size: 12 }, 
-              color: '#1b5e20',
-              mirror: false 
-            }, 
-            grid: { display: false } 
+            top: 10,
+            bottom: -50      // ดึงขอบล่างขึ้นเนื่องจากกราฟครึ่งวงกลมครึ่งล่างจะว่าง เพื่อให้กระชับหน้าจอ iOS
           }
         },
         plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false } 
+          legend: {
+            display: true,
+            position: 'top', // แสดงแถบสีไว้ด้านบน
+            labels: {
+              boxWidth: 12,
+              padding: 10,
+              font: { family: 'Sarabun', weight: 'bold', size: 11 },
+              color: '#1b5e20',
+              // 🛠️ ฟังก์ชัน Custom พิเศษ: นำตัวเลขสรุปและเปอร์เซ็นต์มาต่อท้ายป้ายแถบสีโดยตรง ปลอดภัยต่อจอ iOS 100%
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  const dataset = data.datasets[0];
+                  const total = dataset.data.reduce((a, b) => a + b, 0);
+                  
+                  return data.labels.map(function(label, i) {
+                    const value = dataset.data[i] || 0;
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    // นำข้อมูลจำนวนและเปอร์เซ็นต์มาต่อท้าย label
+                    const newLabelText = `${label} : ${value} (${percentage}%)`;
+                    
+                    return {
+                      text: newLabelText,
+                      fillStyle: dataset.backgroundColor[i],
+                      strokeStyle: dataset.borderColor,
+                      lineWidth: dataset.borderWidth,
+                      hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i].hidden,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
+            }
+          },
+          tooltip: {
+            enabled: true,
+            callbacks: {
+              label: function(context) {
+                let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                let value = context.raw;
+                let pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                return ` ${context.label.split(' ')[0]}: ${value} รายการ (${pct}%)`;
+              }
+            }
+          }
         }
-      },
-      plugins: [customDataLabelsPlugin] 
+      }
     });
   }
 
