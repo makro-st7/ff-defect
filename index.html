@@ -30,7 +30,12 @@
     @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 
     .app-header { position: sticky; top: 0; background: var(--bg-card); z-index: 100; padding: 16px; border-bottom: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+    .header-container { max-width: 600px; margin: 0 auto; width: 100%; display: flex; justify-content: space-between; align-items: center; }
     .app-header h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); }
+    
+    /* ปุ่มเปิดดู Report */
+    .btn-report-trigger { background: #e8f5e9; color: var(--primary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+    .btn-report-trigger:active { transform: scale(0.95); background: var(--border); }
 
     .main-wrapper { padding: 12px; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .panel-container { background: var(--bg-card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
@@ -85,8 +90,6 @@
     .card-title { font-weight: 600; font-size: 0.95rem; color: var(--text-main); line-height: 1.4; flex: 1; }
     
     .card-detail { font-size: 0.85rem; color: #33691e; line-height: 1.5; margin-bottom: 8px; }
-    
-    /* สไตล์กล่อง Remark ตกแต่งให้อ่านง่าย */
     .card-remark-box { background: rgba(0,0,0,0.03); border-left: 3px solid var(--text-sub); padding: 6px 10px; margin: 6px 0; border-radius: 4px; font-size: 0.85rem; color: #424242; }
     
     .time-stamp { font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
@@ -139,12 +142,7 @@
     input[readonly] { background-color: #e8f5e9; color: var(--text-sub); cursor: not-allowed; }
     input.new-item-input { background: #fff3cd !important; border-color: #ffeba2 !important; color: #856404 !important; }
     
-    input[type="date"] {
-      display: flex;
-      align-items: center;
-      min-height: 45px;
-    }
-
+    input[type="date"] { display: flex; align-items: center; min-height: 45px; }
     .qty-row { display: flex; gap: 10px; }
     .qty-container { display: flex; align-items: center; flex: 2; border: 1px solid var(--border); border-radius: 10px; background: #fafdfa; padding: 2px; }
     .qty-btn { background: #fff; border: 1px solid var(--border); color: var(--text-main); width: 38px; height: 38px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -154,6 +152,15 @@
     .btn-submit { width: 100%; padding: 14px; background: var(--success); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(67, 160, 71, 0.2); }
     .btn-submit:disabled { background: #cbd5e1; box-shadow: none; }
     .loading-text { font-size: 0.8rem; color: var(--primary); display: none; margin-top: 4px; font-weight: 600; }
+
+    /* ตกแต่งตารางและกล่องสถิติใน Report */
+    .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .report-stat-card { background: #f4f7f4; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+    .report-stat-card h4 { font-size: 0.8rem; color: var(--text-sub); margin-bottom: 4px; }
+    .report-stat-card p { font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
+    .report-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.9rem; }
+    .report-table th, .report-table td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    .report-table th { background: #e8f5e9; color: var(--text-main); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -161,16 +168,19 @@
 <div id="alertBox" class="alert"></div>
 
 <div class="app-header">
-  <div style="max-width:600px; margin:0 auto; width:100%;">
-    <h2><i class="fa-solid fa-seedling" style="color: var(--primary);"></i> ข้อมูลสินค้าอาหารสดที่มีความผิดปกติ</h2>
+  <div class="header-container">
+    <h2><i class="fa-solid fa-seedling" style="color: var(--primary);"></i> ข้อมูลสินค้าอาหารสดผิดปกติ</h2>
+    <!-- ปุ่มสำหรับเรียกดูรายงานสรุป -->
+    <button class="btn-report-trigger" onclick="openReportModal()"><i class="fa-solid fa-chart-pie"></i> รายงาน</button>
   </div>
 </div>
 
 <button class="fab-btn" onclick="openModal()"><i class="fa-solid fa-plus"></i></button>
 
-<div id="formModal" class="modal-overlay" onclick="closeModalOutside(event)">
+<!-- MODAL 1: บันทึกสินค้าผิดปกติ -->
+<div id="formModal" class="modal-overlay" onclick="closeModalOutside(event, 'formModal')">
   <div class="modal-content">
-    <button class="close-modal-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    <button class="close-modal-btn" onclick="closeModal('formModal')"><i class="fa-solid fa-xmark"></i></button>
     <h3 style="margin-bottom: 16px; font-size: 1.1rem;"><i class="fa-solid fa-apple-whole" style="color: var(--danger);"></i> บันทึกสินค้าผิดปกติ</h3>
     
     <form id="defectForm" onsubmit="handleFormSubmit(event)">
@@ -219,13 +229,52 @@
           <option value="Punched">✅ Punched</option>
         </select>
       </div>
-      <!-- ช่องกรอกรายละเอียดเพิ่มเติม (Remark) -->
       <div class="form-group">
         <label for="remark">รายละเอียดเพิ่มเติม (Remark)</label>
         <input type="text" id="remark" name="remark" placeholder="กรอกรายละเอียดเพิ่มเติม (ระบุหรือไม่ก็ได้)...">
       </div>
       <button type="submit" class="btn-submit" id="submitBtn"><i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล</button>
     </form>
+  </div>
+</div>
+
+<!-- MODAL 2: หน้าต่างสรุประบบ Report -->
+<div id="reportModal" class="modal-overlay" onclick="closeModalOutside(event, 'reportModal')">
+  <div class="modal-content" style="max-height: 90vh;">
+    <button class="close-modal-btn" onclick="closeModal('reportModal')"><i class="fa-solid fa-xmark"></i></button>
+    <h3 style="margin-bottom: 16px; font-size: 1.1rem; color: var(--primary);"><i class="fa-solid fa-chart-line"></i> รายงานสรุปข้อมูล Real-time</h3>
+    
+    <div class="report-grid">
+      <div class="report-stat-card">
+        <h4>รายการผิดปกติทั้งหมด</h4>
+        <p id="repTotalCases">0 รายการ</p>
+      </div>
+      <div class="report-stat-card">
+        <h4>รอดำเนินการ (รอ/ตกค้าง)</h4>
+        <p id="repPendingCases" style="color: var(--danger);">0 รายการ</p>
+      </div>
+    </div>
+
+    <h4 style="font-size: 0.9rem; margin-bottom: 6px;"><i class="fa-solid fa-warehouse"></i> จำนวนสินค้าแยกตามคลัง</h4>
+    <table class="report-table">
+      <thead>
+        <tr><th>คลังสินค้า</th><th>จำนวนเคสที่พบ</th></tr>
+      </thead>
+      <tbody id="repWarehouseTable">
+        <tr><td colspan="2" style="text-align:center; color:#999;">ไม่มีข้อมูล</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="font-size: 0.9rem; margin: 16px 0 6px 0;"><i class="fa-solid fa-triangle-exclamation"></i> สินค้าที่พบปัญหาบ่อยที่สุด 5 อันดับแรก</h4>
+    <table class="report-table">
+      <thead>
+        <tr><th>ชื่อสินค้า</th><th>จำนวนครั้งที่พบ</th></tr>
+      </thead>
+      <tbody id="repTopItemsTable">
+        <tr><td colspan="2" style="text-align:center; color:#999;">ไม่มีข้อมูล</td></tr>
+      </tbody>
+    </table>
+    <div style="height: 20px;"></div>
   </div>
 </div>
 
@@ -261,6 +310,7 @@
   let allLogsData = []; 
   let currentFilterStatus = "ทั้งหมด";
   let statusChartInstance = null;
+  let activeFilteredData = []; // เก็บข้อมูลที่ผ่านการกรองล่าสุดเพื่อใช้ทำ Report
 
   document.getElementById('description').readOnly = true;
   document.getElementById('receiveDate').value = new Date().toISOString().substring(0, 10);
@@ -274,12 +324,49 @@
     document.getElementById('formModal').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
-  function closeModal() {
-    document.getElementById('formModal').classList.remove('open');
+  function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('open');
     document.body.style.overflow = '';
   }
-  function closeModalOutside(event) {
-    if(event.target.id === 'formModal') closeModal();
+  function closeModalOutside(event, modalId) {
+    if(event.target.id === modalId) closeModal(modalId);
+  }
+
+  // ระบบประมวลผลคำนวณ Report และแสดงผล Modal รายงาน
+  function openReportModal() {
+    document.getElementById('repTotalCases').innerText = activeFilteredData.length + " รายการ";
+    
+    const pendingCount = activeFilteredData.filter(d => d.status === 'รอ Load' || d.status === 'สินค้าตกค้าง').length;
+    document.getElementById('repPendingCases').innerText = pendingCount + " รายการ";
+
+    // 1. สรุปแยกคลังสินค้า
+    const whMap = {};
+    activeFilteredData.forEach(d => {
+      const wh = d.warehouse || 'ไม่ระบุ';
+      whMap[wh] = (whMap[wh] || 0) + 1;
+    });
+    let whHtml = '';
+    Object.keys(whMap).sort().forEach(wh => {
+      whHtml += `<tr><td>คลัง ${wh}</td><td><strong>${whMap[wh]}</strong> ครั้ง</td></tr>`;
+    });
+    document.getElementById('repWarehouseTable').innerHTML = whHtml || '<tr><td colspan="2" style="text-align:center; color:#999;">ไม่มีข้อมูลคลังสินค้า</td></tr>';
+
+    // 2. สรุปสินค้าผิดปกติยอดฮิต 5 อันดับแรก
+    const itemMap = {};
+    activeFilteredData.forEach(d => {
+      const title = d.description ? `[${d.item}] ${d.description}` : `รหัส: ${d.item}`;
+      itemMap[title] = (itemMap[title] || 0) + 1;
+    });
+    const sortedItems = Object.keys(itemMap).map(key => ({name: key, count: itemMap[key]})).sort((a,b) => b.count - a.count).slice(0, 5);
+    
+    let itemHtml = '';
+    sortedItems.forEach(i => {
+      itemHtml += `<tr><td>${i.name}</td><td><span style="color:var(--danger); font-weight:bold;">${i.count}</span> ครั้ง</td></tr>`;
+    });
+    document.getElementById('repTopItemsTable').innerHTML = itemHtml || '<tr><td colspan="2" style="text-align:center; color:#999;">ไม่มีข้อมูลสินค้า</td></tr>';
+
+    document.getElementById('reportModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
   }
 
   function handleUnitChange() {
@@ -354,7 +441,7 @@
     try {
       allLogsData.unshift({ ...newItem, row: 'temp', updatedAt: new Date().toISOString() });
       filterData();
-      closeModal();
+      closeModal('formModal');
       showAlert("🎉 บันทึกข้อมูลเรียบร้อยแล้ว!");
       
       document.getElementById('defectForm').reset();
@@ -395,12 +482,12 @@
 
   function filterData() {
     const searchQuery = document.getElementById('searchBar').value.toLowerCase();
-    const filtered = allLogsData.filter(log => {
+    activeFilteredData = allLogsData.filter(log => {
       const matchSearch = String(log.item).toLowerCase().includes(searchQuery) || String(log.description).toLowerCase().includes(searchQuery);
       const matchStatus = currentFilterStatus === "ทั้งหมด" || String(log.status) === currentFilterStatus;
       return matchSearch && matchStatus;
     });
-    renderCards(filtered);
+    renderCards(activeFilteredData);
     updateChartData(); 
   }
 
@@ -429,8 +516,6 @@
         } else { formattedTime = log.updatedAt; }
       }
 
-      // เงื่อนไข: ถ้ามีข้อมูล Remark และค่านั้นไม่ใช่ค่าว่างหรือเครื่องหมาย "-" ให้สร้างบล็อก HTML
-      // แต่ถ้าไม่มีข้อมูล ให้ปล่อยเป็นค่าว่าง เพื่อไม่แสดงกล่อง Remark บนตัวการ์ดเลย
       let remarkHtml = '';
       if (log.remark && log.remark.trim() !== '' && log.remark !== '-') {
         remarkHtml = `<div class="card-remark-box"><strong>รายละเอียดเพิ่มเติม:</strong> ${log.remark}</div>`;
@@ -534,16 +619,9 @@
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        layout: {
-          padding: {
-            right: 80 
-          }
-        },
+        layout: { padding: { right: 80 } },
         scales: {
-          x: { 
-            display: false, 
-            beginAtZero: true
-          },
+          x: { display: false, beginAtZero: true },
           y: { 
             ticks: { font: { family: 'Sarabun', weight: 'bold', size: 12 }, color: '#1b5e20' }, 
             grid: { display: false } 
