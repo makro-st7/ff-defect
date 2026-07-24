@@ -85,12 +85,15 @@
     .card-title { font-weight: 600; font-size: 0.95rem; color: var(--text-main); line-height: 1.4; flex: 1; }
     
     .card-detail { font-size: 0.85rem; color: #33691e; line-height: 1.5; margin-bottom: 8px; }
+    
+    /* สไตล์กล่อง Remark ตกแต่งให้อ่านง่าย */
+    .card-remark-box { background: rgba(0,0,0,0.03); border-left: 3px solid var(--text-sub); padding: 6px 10px; margin: 6px 0; border-radius: 4px; font-size: 0.85rem; color: #424242; }
+    
     .time-stamp { font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
     
     .card-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px; }
     .card-actions label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
     
-    /* 🛠️ ปรับปรุงสไตล์ช่อง Select สลับสถานะบนการ์ด เพื่อไม่ให้เบี้ยวในระบบ iOS */
     .inline-select { 
       padding: 6px 10px; 
       font-size: 0.85rem; 
@@ -118,7 +121,6 @@
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-sub); }
     
-    /* 🛠️ แก้ไขปัญหาช่องวันที่ (Date) และอินพุตอื่นๆ บวมหล่นขอบจอบน iOS Safari */
     input[type="text"], input[type="number"], input[type="date"], select { 
       width: 100%; 
       padding: 12px; 
@@ -128,16 +130,15 @@
       outline: none; 
       background: #fafdfa; 
       color: var(--text-main); 
-      -webkit-appearance: none;       /* ล้างค่าดั้งเดิมของระบบ iOS */
+      -webkit-appearance: none;      
       appearance: none;
-      box-sizing: border-box !important;  /* บังคับให้คิดความกว้างรวม Padding เสมอ */
-      min-width: 0;                    /* ป้องกันบราวเซอร์แอบขยายขนาดกล่องอัตโนมัติ */
+      box-sizing: border-box !important;  
+      min-width: 0;                    
     }
     input:focus, select:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
     input[readonly] { background-color: #e8f5e9; color: var(--text-sub); cursor: not-allowed; }
     input.new-item-input { background: #fff3cd !important; border-color: #ffeba2 !important; color: #856404 !important; }
     
-    /* 🛠️ ดึงฟอร์แมตช่องวันที่ของ iOS ให้มีความสูงที่พอดีเป๊ะ กดเลือกง่าย */
     input[type="date"] {
       display: flex;
       align-items: center;
@@ -217,6 +218,11 @@
           <option value="สินค้าตกค้าง">⚠️ สินค้าตกค้าง</option>
           <option value="Punched">✅ Punched</option>
         </select>
+      </div>
+      <!-- ช่องกรอกรายละเอียดเพิ่มเติม (Remark) -->
+      <div class="form-group">
+        <label for="remark">รายละเอียดเพิ่มเติม (Remark)</label>
+        <input type="text" id="remark" name="remark" placeholder="กรอกรายละเอียดเพิ่มเติม (ระบุหรือไม่ก็ได้)...">
       </div>
       <button type="submit" class="btn-submit" id="submitBtn"><i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล</button>
     </form>
@@ -341,7 +347,8 @@
       quantity: document.getElementById('quantity').value + " " + document.getElementById('unit').value,
       receiveDate: document.getElementById('receiveDate').value,
       warehouse: document.getElementById('warehouse').value,
-      status: document.getElementById('status').value
+      status: document.getElementById('status').value,
+      remark: document.getElementById('remark').value.trim() 
     };
 
     try {
@@ -422,6 +429,13 @@
         } else { formattedTime = log.updatedAt; }
       }
 
+      // เงื่อนไข: ถ้ามีข้อมูล Remark และค่านั้นไม่ใช่ค่าว่างหรือเครื่องหมาย "-" ให้สร้างบล็อก HTML
+      // แต่ถ้าไม่มีข้อมูล ให้ปล่อยเป็นค่าว่าง เพื่อไม่แสดงกล่อง Remark บนตัวการ์ดเลย
+      let remarkHtml = '';
+      if (log.remark && log.remark.trim() !== '' && log.remark !== '-') {
+        remarkHtml = `<div class="card-remark-box"><strong>รายละเอียดเพิ่มเติม:</strong> ${log.remark}</div>`;
+      }
+
       htmlContent += `
         <div class="card ${statusClass}">
           <div class="card-header-row">
@@ -430,6 +444,7 @@
           <div class="card-detail">
             <strong>จำนวน:</strong> ${log.quantity} &nbsp;|&nbsp; <strong>คลัง:</strong> ${log.warehouse}<br>
             <strong>วันที่รับ:</strong> ${formattedDate}
+            ${remarkHtml}
             <div class="time-stamp"><i class="fa-regular fa-clock"></i> ล่าสุด: ${formattedTime}</div>
           </div>
           <div class="card-actions">
