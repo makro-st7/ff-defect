@@ -566,7 +566,7 @@
     }).then(() => { showAlert("✅ บันทึกสำเร็จ!"); });
   }
 
-  // ✨ จุดฟิกซ์ปัญหาหน้าจอ iOS: เพิ่มพื้นที่ว่างด้านขวา (padding.right) และปรับฟอนต์ของตัวเลขบนแท่งกราฟ
+  // ฟังก์ชันตั้งค่ากราฟ: แก้ไขปัญหาเบียดจอด้านซ้ายบน iOS Safari 100%
   function initChart() {
     const ctx = document.getElementById('statusChart').getContext('2d');
     
@@ -585,15 +585,21 @@
           const textToShow = ` ${value} (${percentage}%)`;
 
           ctx.save();
-          ctx.font = 'bold 11px Sarabun'; // ปรับลดขนาดลงเล็กน้อยให้อ่านง่ายบนมือถือ
-          ctx.fillStyle = '#1b5e20'; 
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
+          ctx.font = 'bold 11px Sarabun'; 
           
-          const xPos = bar.x + 8;
-          const yPos = bar.y;
+          // เช็คความกว้างของแท่งกราฟ ถ้ายาวพอให้ซ่อนตัวเลขเข้าด้านใน (สีขาว) ถ้ายาวไม่พอให้อยู่ข้างนอก (สีเขียว)
+          if (bar.width > 70) {
+            ctx.fillStyle = '#ffffff'; 
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(textToShow, bar.x - 8, bar.y);
+          } else {
+            ctx.fillStyle = '#1b5e20'; 
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(textToShow, bar.x + 8, bar.y);
+          }
           
-          ctx.fillText(textToShow, xPos, yPos);
           ctx.restore();
         });
       }
@@ -607,7 +613,7 @@
           data: [0, 0, 0],
           backgroundColor: ['#f9a825', '#e65100', '#43a047'],
           borderRadius: 6,
-          barThickness: 16 
+          barThickness: 18 
         }]
       },
       options: {
@@ -616,13 +622,20 @@
         maintainAspectRatio: false,
         layout: {
           padding: {
-            right: 110 // ✨ ขยายความกว้างฝั่งขวาเพิ่มขึ้นจาก 80 เป็น 110 เพื่อให้ iOS แสดงเปอร์เซ็นต์ได้ครบถ้วน
+            left: 95,  // ขยายพื้นที่ช่องว่างให้แกน Y ฝั่งซ้ายเต็มที่ ไม่ให้ตัวอักษร "รอ Load ⏳" โดนบีบหาย
+            right: 65, 
+            top: 5,
+            bottom: 5
           }
         },
         scales: {
           x: { display: false, beginAtZero: true },
           y: { 
-            ticks: { font: { family: 'Sarabun', weight: 'bold', size: 12 }, color: '#1b5e20' }, 
+            ticks: { 
+              font: { family: 'Sarabun', weight: 'bold', size: 12 }, 
+              color: '#1b5e20',
+              mirror: false 
+            }, 
             grid: { display: false } 
           }
         },
